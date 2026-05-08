@@ -1,0 +1,15 @@
+# Runtime files
+*.log
+*.pid
+
+# Temporary files
+tmp/
+*.tmp
+*.swp
+*.swo
+
+# OS/editor files
+.DS_Store
+.idea/
+.vscode/
+
