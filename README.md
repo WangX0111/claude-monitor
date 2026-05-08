@@ -1,5 +1,7 @@
 # claude-monitor
 
+[中文](README_zh.md)
+
 A lightweight tmux-based monitor for Claude Code CLI. It keeps Claude running in a tmux session, watches recent output for disconnect/error prompts, sends `continue` when recovery is needed, and auto-confirms common interactive prompts.
 
 ## Features
@@ -118,3 +120,5 @@ make check
 ## Safety Notes
 
 This tool can automatically press Enter and send `continue` to a Claude Code session. Use it only in environments where that behavior is acceptable.
+
+In addition, there might be cases of incorrect or multiple 'continue' messages being sent, which still requires optimization. If you have any good ideas, you're welcome to share.

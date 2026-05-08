@@ -29,7 +29,7 @@ test_help_output() {
     local output
     output="$(bash "$SCRIPT" --help)"
 
-    assert_contains "$output" "用法:"
+    assert_contains "$output" "Usage:"
     assert_contains "$output" "--daemon"
     assert_contains "$output" "--attach"
 }
@@ -66,7 +66,7 @@ TMUX
         exit 1
     fi
 
-    assert_contains "$output" "会话 'missing' 不存在"
+    assert_contains "$output" "Session 'missing' does not exist"
 }
 
 test_daemon_attach_missing_session_fails_before_spawn() {
@@ -101,7 +101,7 @@ TMUX
         exit 1
     fi
 
-    assert_contains "$output" "attach 模式不会创建新会话"
+    assert_contains "$output" "attach mode will not create a new session"
     if [[ -f "$TMP_DIR/daemon-monitor.pid" ]]; then
         printf 'Expected daemon attach failure not to leave a PID file.\n' >&2
         exit 1
