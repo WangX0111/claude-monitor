@@ -11,6 +11,7 @@ LOG_FILE="${CLAUDE_MONITOR_LOG:-claude-monitor.log}"
 PID_FILE="${CLAUDE_MONITOR_PID:-claude-monitor.pid}"
 max_consecutive=3
 consecutive_checks=0
+continue_sent=false
 ATTACH_ONLY=false
 
 # color output
@@ -119,6 +120,27 @@ check_session_active() {
     return 0  # active
 }
 
+handle_disconnection_keywords() {
+    if check_disconnection_keywords; then
+        consecutive_checks=$((consecutive_checks + 1))
+
+        if [ "$continue_sent" = true ]; then
+            log_warn "Anomaly already handled with continue, waiting for output to recover..."
+            return 0
+        fi
+
+        if [ "$consecutive_checks" -ge "$max_consecutive" ]; then
+            log_warn "Detected anomalies ${max_consecutive} consecutive times, sending continue..."
+            send_continue
+            continue_sent=true
+            consecutive_checks=0
+        fi
+    else
+        consecutive_checks=0
+        continue_sent=false
+    fi
+}
+
 # Main monitor loop
 main() {
     require_runtime_commands
@@ -142,6 +164,7 @@ main() {
             log_error "Session disconnected, restarting..."
             start_claude
             consecutive_checks=0
+            continue_sent=false
             sleep "$CHECK_INTERVAL"
             continue
         fi
@@ -150,17 +173,7 @@ main() {
         auto_confirm_prompt
 
         # Check output for disconnection keywords
-        if check_disconnection_keywords; then
-            consecutive_checks=$((consecutive_checks + 1))
-
-            if [ "$consecutive_checks" -ge "$max_consecutive" ]; then
-                log_warn "Detected anomalies ${max_consecutive} consecutive times, sending continue..."
-                send_continue
-                consecutive_checks=0
-            fi
-        else
-            consecutive_checks=0
-        fi
+        handle_disconnection_keywords
 
         sleep "$CHECK_INTERVAL"
     done
@@ -233,6 +246,7 @@ run_daemon_mode() {
             log_error "Session disconnected, restarting..."
             start_claude
             consecutive_checks=0
+            continue_sent=false
             sleep "$CHECK_INTERVAL"
             continue
         fi
@@ -241,17 +255,7 @@ run_daemon_mode() {
         auto_confirm_prompt
 
         # Check output for disconnection keywords
-        if check_disconnection_keywords; then
-            consecutive_checks=$((consecutive_checks + 1))
-
-            if [ "$consecutive_checks" -ge "$max_consecutive" ]; then
-                log_warn "Detected anomalies ${max_consecutive} consecutive times, sending continue..."
-                send_continue
-                consecutive_checks=0
-            fi
-        else
-            consecutive_checks=0
-        fi
+        handle_disconnection_keywords
 
         sleep "$CHECK_INTERVAL"
     done

@@ -108,9 +108,65 @@ TMUX
     fi
 }
 
+test_repeated_error_output_sends_continue_once() {
+    local continue_log="$TMP_DIR/continue.log"
+
+    mkdir -p "$TMP_DIR/bin"
+    cat > "$TMP_DIR/bin/tmux" <<TMUX
+#!/usr/bin/env bash
+case "\$1" in
+    has-session)
+        exit 0
+        ;;
+    capture-pane)
+        printf '%s\n' 'connection lost'
+        exit 0
+        ;;
+    send-keys)
+        if [[ "\$*" == *continue* ]]; then
+            printf 'continue\n' >> "$continue_log"
+        fi
+        exit 0
+        ;;
+    *)
+        exit 0
+        ;;
+esac
+TMUX
+    cat > "$TMP_DIR/bin/sleep" <<'SLEEP'
+#!/usr/bin/env bash
+exit 0
+SLEEP
+    chmod +x "$TMP_DIR/bin/tmux" "$TMP_DIR/bin/sleep"
+
+    set +e
+    PATH="$TMP_DIR/bin:$PATH" \
+    CLAUDE_MONITOR_LOG="$TMP_DIR/repeated-error.log" \
+    CLAUDE_MONITOR_PID="$TMP_DIR/repeated-error.pid" \
+    timeout 1s bash "$SCRIPT" --daemon-running claude 0 --attach >/dev/null 2>&1
+    local status=$?
+    set -e
+
+    if [[ "$status" -ne 124 ]]; then
+        printf 'Expected monitor loop to be stopped by timeout, got status %s.\n' "$status" >&2
+        exit 1
+    fi
+
+    local continue_count=0
+    if [[ -f "$continue_log" ]]; then
+        continue_count="$(wc -l < "$continue_log" | tr -d ' ')"
+    fi
+
+    if [[ "$continue_count" -ne 1 ]]; then
+        printf 'Expected exactly one continue command, got %s.\n' "$continue_count" >&2
+        exit 1
+    fi
+}
+
 test_syntax
 test_help_output
 test_attach_missing_session_fails
 test_daemon_attach_missing_session_fails_before_spawn
+test_repeated_error_output_sends_continue_once
 
 printf 'smoke tests passed\n'
