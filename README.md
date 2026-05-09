@@ -103,6 +103,26 @@ bash -l -c 'source ~/.bashrc 2>/dev/null; claude --yolo'
 
 Edit `claude-monitor.sh` if you need a different Claude startup command.
 
+## How It Differs From Claude's Built-in Behavior
+
+`claude-monitor` is an external automation wrapper around Claude Code CLI. It is not a replacement for Claude's own session handling; it is meant for unattended recovery when Claude is running inside tmux.
+
+| Area | `claude-monitor` | Claude Code CLI |
+| --- | --- | --- |
+| Role | External watchdog script | Built-in interactive CLI |
+| Runtime | Wraps `claude` in a tmux session | Runs directly in the terminal |
+| Disconnection handling | Watches tmux output for recovery keywords | Uses Claude CLI's own session behavior |
+| `continue` handling | Sends `continue` automatically after repeated recoverable signals | Usually remains user-driven or CLI-managed |
+| Prompt confirmation | Auto-confirms common proceed/continue prompts | Usually waits for user confirmation |
+| Background mode | Supports `--daemon` | Primarily foreground interactive use |
+| Existing sessions | Can monitor an existing tmux session with `--attach` | Does not manage tmux sessions |
+| Reliability model | Simple text matching; easy to inspect, but may miss or misread output | Closer to internal CLI state, but less focused on unattended automation |
+| Risk profile | More automated and therefore higher-risk in sensitive environments | More conservative and user-controlled |
+
+Use this project when you want Claude Code to keep running on a remote machine, recover from common terminal-visible failures, or continue long-running work without constantly watching the terminal.
+
+Avoid it when automatic confirmation is not acceptable, when commands are high-risk, or when you need exact knowledge of Claude's internal state instead of terminal-output heuristics.
+
 ## Development
 
 Run checks:
@@ -121,4 +141,4 @@ make check
 
 This tool can automatically press Enter and send `continue` to a Claude Code session. Use it only in environments where that behavior is acceptable.
 
-In addition, there might be cases of incorrect or multiple 'continue' messages being sent, which still requires optimization. If you have any good ideas, you're welcome to share.
+The monitor sends `continue` at most once for the same continuous error episode. It will only become eligible to send `continue` again after the monitored output no longer contains the configured recovery keywords.
